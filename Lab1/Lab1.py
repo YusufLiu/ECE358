@@ -4,6 +4,7 @@ import sys
 import argparse
 import math
 import random
+import csv
 
 Ro  = [0.25+(i*0.1) for i in xrange(8)]
 RoK =[0.5+(i*0.1) for i in xrange(10)]
@@ -163,7 +164,9 @@ def eventHandler(eventList):
             NofDeparture = NofDeparture+1
         else:
             NofObservation = NofObservation + 1
-            packetCount = NofArrival-NofDeparture-1
+            packetCount = NofArrival-NofDeparture
+            if(packetCount>0):
+                packetCount = packetCount -1
             packetInQueueCount.append(packetCount)
             if(packetCount == 0):
                 NofIdle = NofIdle + 1
@@ -237,41 +240,50 @@ def checkMeanVariance(Lambda):
     print("Mean:" + str(mean) + " compare to " + str(expectedMean)+ "\n" + "Variance:" + str(variance)+ " compare to " + str(expectedVariance))
 
 def infiniteBuffer():
-    la = calculateLambda(Ro[0])
-    checkMeanVariance(la)
-    print(la)
-    packetsList = generatePacketList(10000,la)
-    observerList = generateObserverList(10000,la*2)
-    print("starting")
-    eventList = createDES(packetsList,observerList)
-    print("sorting")
-    eventList = mergeSort(eventList)
-    print(len(eventList))
-    result = eventHandler(eventList)
-    print("NofArrival: " + str(result[0])+ "NofDeparture: "+str(result[1])+ "NofObservation: "+str(result[2])+ "NofIdle: "+ str(result[3]))
+    ##for r in Ro:
+        la = calculateLambda(1.2)
+        checkMeanVariance(la)
+        print(la)
+        packetsList = generatePacketList(10000,la)
+        observerList = generateObserverList(10000,la*2)
+        print("starting")
+        eventList = createDES(packetsList,observerList)
+        print("sorting")
+        eventList = mergeSort(eventList)
+        print(len(eventList))
+        result = eventHandler(eventList)
+        E = float(sum(result[4]))
+        L = float(len(result[4]))
+        print(sum(result[4]))
+        print(len(observerList))
+        meanOfPacket = E/L
+        Pidle = result[3]/L
+        print(meanOfPacket)
+        print(Pidle)
+        print("NofArrival: " + str(result[0])+ "NofDeparture: "+str(result[1])+ "NofObservation: "+str(result[2])+ "NofIdle: "+ str(result[3])+"\n")
 
 
 def finiteBuffer(K):
     la = calculateLambda(RoK[0])
     checkMeanVariance(la)
     print(la)
-    packetsList = generatePacketListLimitK(1000,la)
-    observerList = generateObserverList(1000,la*2)
+    packetsList = generatePacketListLimitK(5000,la)
+    observerList = generateObserverList(5000,la*2)
     print("starting")
     eventList = createDESK(packetsList,observerList)
     print("sorting")
     eventList = mergeSort(eventList)
     result = eventHandlerLimitK(eventList,K)
-    print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3]))
+    print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+ " NofPacketLoss: "+ str(result[4]))
     print(len(packetsList))
     print(len(observerList))
 
 
 
 def main():
-    #infiniteBuffer()
+    infiniteBuffer()
     K = 5
-    finiteBuffer(K)
+    #finiteBuffer(K)
 
 
 if __name__ == '__main__':
