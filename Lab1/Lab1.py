@@ -81,15 +81,17 @@ def generatePacketList(T,Lambda):
     sojournTime  = departureTime - arrivalTime # calculate the sojourn time
     sojournList = [sojournTime]
     newPacket = packet(arrivalTime,packetSize,serviceTime,departureTime)
-    packetList = [newPacket]
-    while(arrivalTime < T):
+    packetList = [newPacket] #add the new packet to the packet list
+    while(arrivalTime < T):# check if this arrival is still in the time period
         nextarrival = nextTime(Lambda)
         arrivalTime += nextarrival
         packetSize = nextTime(1.0/12000.0)
         serviceTime = packetSize/1000000
         if(arrivalTime >= packetList[-1].departureTime):
+            #check if the queue is empty 
             departureTime = departureTime = arrivalTime+serviceTime
         else:
+            #calculated the departure time base on the last packet departure time
             departureTime = packetList[-1].departureTime + serviceTime
         sojournTime  = departureTime - arrivalTime
         sojournList += [sojournTime]
