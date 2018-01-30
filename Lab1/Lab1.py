@@ -17,18 +17,6 @@ class packet:
         self.serviceTime = serviceTime
         self.departureTime = new_dpTime
 
-    def set_arrivalTime(self,new_arrivalTime):
-        self.arrivalTime = new_arrivalTime
-
-    def set_packetSize(self, new_size):
-        self.packetSize = new_size
-
-    def set_serviceime(self, new_serviceTime):
-        self.serviceTime = new_serviceTime
-
-    def set_departureTime(self, new_dpTime):
-        self.departureTime = new_dpTime
-
 class observer:
     def __init__(self,new_observeTime):
         self.observeTime = new_observeTime
@@ -74,22 +62,24 @@ def nextTime(rateParameter):
 def calculateLambda(Ro):
     return Ro*1000000/12000
 
-def generateObserverList(T,Lambda):
-    arrivalTime = nextTime(Lambda)
-    newObserver = observer(arrivalTime)
+def generateObserverList(T,Alpha):
+    arrivalTime = nextTime(Alpha) #generate an arrival time
+    newObserver = observer(arrivalTime) # create a observer for the new arrival time
     observerList = [newObserver]
-    while(arrivalTime < T):
-        nextarrival = nextTime(Lambda)
-        arrivalTime += nextarrival
-        newObserver = observer(arrivalTime)
-        observerList += [newObserver]
+    while(arrivalTime < T): # check if this arrival is still in the time period
+        nextarrival = nextTime(Alpha) #generate an arrival time
+        arrivalTime += nextarrival #increment the time counter
+        newObserver = observer(arrivalTime) # create a observer for the new arrival time
+        observerList += [newObserver] #add the new observer to the observer list
     return observerList
 
 def generatePacketList(T,Lambda):
-    arrivalTime = nextTime(Lambda)
-    packetSize = nextTime(1.0/12000.0)
-    serviceTime = packetSize/1000000
-    departureTime = arrivalTime+serviceTime
+    arrivalTime = nextTime(Lambda) #generate an arrival time
+    packetSize = nextTime(1.0/12000.0) #generate a random packet size
+    serviceTime = packetSize/1000000 #calculate the service time
+    departureTime = arrivalTime+serviceTime #calculate the departure time
+    sojournTime  = departureTime - arrivalTime # calculate the sojourn time
+    sojournList = [sojournTime]
     newPacket = packet(arrivalTime,packetSize,serviceTime,departureTime)
     packetList = [newPacket]
     while(arrivalTime < T):
@@ -101,9 +91,12 @@ def generatePacketList(T,Lambda):
             departureTime = departureTime = arrivalTime+serviceTime
         else:
             departureTime = packetList[-1].departureTime + serviceTime
+        sojournTime  = departureTime - arrivalTime
+        sojournList += [sojournTime]
         newPacket = packet(arrivalTime,packetSize,serviceTime,departureTime)
         packetList += [newPacket]
-    return packetList
+    resultList = [packetList,sojournList]
+    return resultList
 
 def generatePacketListLimitK(T,Lambda):
     arrivalTime = nextTime(Lambda)
@@ -166,12 +159,16 @@ def eventHandler(eventList):
             NofObservation = NofObservation + 1
             packetCount = NofArrival-NofDeparture
             if(packetCount>0):
-                packetCount = packetCount -1
+                packetCount = packetCount
             packetInQueueCount.append(packetCount)
             if(packetCount == 0):
                 NofIdle = NofIdle + 1
-
     return [NofArrival,NofDeparture,NofObservation,NofIdle,packetInQueueCount]
+
+def saveAs(fileName, data):
+    with open("%s.csv" % fileName, "wb") as resultFile:
+        wr = csv.writer(resultFile, dialect='excel')
+        wr.writerows(data)
 
 def eventHandlerLimitK(eventList,K):
     NofArrival = 0
@@ -183,12 +180,13 @@ def eventHandlerLimitK(eventList,K):
     packetInQueueCount = []
     NofPacketInQueue = 0
     mostRecentDpartTime = 0
+    lastDpIndex = 0
     while(eventList):
         i = eventList[0]
         if(i.type == "Arrival"):
             packetSize = nextTime(1.0/12000.0)
             serviceTime = packetSize/1000000
-            if (NofPacketInQueue <= K+1):
+            if (NofPacketInQueue < K+1):
                 if(NofPacketInQueue == 0):
                     departureTime = i.time + serviceTime
                     mostRecentDpartTime = departureTime
@@ -196,7 +194,9 @@ def eventHandlerLimitK(eventList,K):
                     departureTime = mostRecentDpartTime + serviceTime
                     mostRecentDpartTime = departureTime
                 departureEvent = event("Departure",departureTime)
-                eventList = departureInsert(eventList,departureEvent)
+                resultList = departureInsert(eventList,departureEvent,lastDpIndex)
+                lastDpIndex = resultList[1]
+                eventList = resultList[0]
                 NofArrival = NofArrival+1
                 NofPacketInQueue = NofPacketInQueue + 1
             else:
@@ -206,29 +206,34 @@ def eventHandlerLimitK(eventList,K):
             NofPacketInQueue = NofPacketInQueue -1
         else:
             NofObservation = NofObservation + 1
-            packetCount = NofPacketInQueue - 1
+            packetCount = NofPacketInQueue
             packetInQueueCount.append(packetCount)
             if(packetCount == 1):
                 NofIdle = NofIdle + 1
         eventList.pop(0)
+        if(lastDpIndex > 0):
+            lastDpIndex = lastDpIndex - 1
 
     return [NofArrival,NofDeparture,NofObservation,NofIdle,NofDropPacket,packetInQueueCount]
 
 
-def departureInsert(eventList,departureEvent):
-    i = 0
+def departureInsert(eventList,departureEvent,dpIndex):
+    i = dpIndex
     if(not eventList):
         return
 
     while(eventList[i].time < departureEvent.time):
-        print("eventLength: "+ str(len(eventList))+ "i length = "+ str(i) + " Type: " + eventList[i].type + " T1: "+ str(eventList[i].time)+ " T2 :" +str(departureEvent.time))
+        #print("eventLength: "+ str(len(eventList))+ "i length = "+ str(i) + " Type: " + eventList[i].type + " T1: "+ str(eventList[i].time)+ " T2 :" +str(departureEvent.time))
         j = len(eventList) -1
         if(len(eventList) == 1):
             break
+
+        if(len(eventList)-i == 1):
+            break
         i = i + 1
-    #if(len(eventList) > 1):
     eventList.insert(i+1,departureEvent)
-    return eventList
+    result = [eventList,i+1]
+    return result
 
 def checkMeanVariance(Lambda):
     randomTime = [nextTime(Lambda) for i in xrange(1000)]
@@ -240,12 +245,16 @@ def checkMeanVariance(Lambda):
     print("Mean:" + str(mean) + " compare to " + str(expectedMean)+ "\n" + "Variance:" + str(variance)+ " compare to " + str(expectedVariance))
 
 def infiniteBuffer():
-    ##for r in Ro:
-        la = calculateLambda(1.2)
+    for r in Ro:
+        la = calculateLambda(r)
         checkMeanVariance(la)
         print(la)
-        packetsList = generatePacketList(10000,la)
-        observerList = generateObserverList(10000,la*2)
+        packetsList = generatePacketList(1000,la)
+        sojournList = packetsList[1]
+        packetsList = packetsList[0]
+        timeLength = len(sojournList)
+        sojournTime = sum(sojournList)/timeLength
+        observerList = generateObserverList(1000,la*2)
         print("starting")
         eventList = createDES(packetsList,observerList)
         print("sorting")
@@ -257,33 +266,45 @@ def infiniteBuffer():
         print(sum(result[4]))
         print(len(observerList))
         meanOfPacket = E/L
-        Pidle = result[3]/L
-        print(meanOfPacket)
-        print(Pidle)
-        print("NofArrival: " + str(result[0])+ "NofDeparture: "+str(result[1])+ "NofObservation: "+str(result[2])+ "NofIdle: "+ str(result[3])+"\n")
+        Pidle = result[3]/L*100
+        print("Average number of packets " + str(meanOfPacket))
+        print("Average sojourn time "+str(sojournTime))
+        print("The proportion of time the server is idle "+str(Pidle))
+        print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+"\n")
 
 
 def finiteBuffer(K):
-    la = calculateLambda(RoK[0])
+    la = calculateLambda(0.5)
     checkMeanVariance(la)
     print(la)
-    packetsList = generatePacketListLimitK(5000,la)
-    observerList = generateObserverList(5000,la*2)
+    packetsList = generatePacketListLimitK(1000,la)
+    packetListSize = len(packetsList)*1.0
+    observerList = generateObserverList(1000,la*2)
     print("starting")
     eventList = createDESK(packetsList,observerList)
     print("sorting")
     eventList = mergeSort(eventList)
     result = eventHandlerLimitK(eventList,K)
+    E = float(sum(result[5]))
+    L = float(len(result[5]))
+    print(sum(result[5]))
+    meanOfPacket = E/L
+    Pidle = result[3]/L*100
+    print("Average number of packets " + str(meanOfPacket))
+    print("The proportion of time the server is idle "+str(Pidle))
+    packetLoss = result[4]/packetListSize*100
+    print("The percentage of packet loss "+str(packetLoss))
     print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+ " NofPacketLoss: "+ str(result[4]))
     print(len(packetsList))
     print(len(observerList))
-
 
 
 def main():
     infiniteBuffer()
     K = 5
     #finiteBuffer(K)
+
+    #checkMeanVariance(75.0)
 
 
 if __name__ == '__main__':
