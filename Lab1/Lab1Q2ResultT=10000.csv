@@ -1,5 +1,5 @@
 T = 10000,,,T=5000,
-Average number of packets,_ value,,Average number of packets,_ value
+Average number of packets, 老 value,,Average number of packets,老 value
 0.335288527,0.25,,0.332014252,0.25
 0.539220749,0.35,,0.535566329,0.35
 0.818205743,0.45,,0.817422998,0.45
@@ -10,8 +10,8 @@ Average number of packets,_ value,,Average number of packets,_ value
 18.71074199,0.95,,19.8608686,0.95
 ,,,,
 ,,,,
-,,,,
-The proportion of time the server is idle,_ value,,,
+T = 10000,,,T=5000,
+The proportion of time the server is idle(Unit %), 老 value,,, 老 value
 74.88096038,0.25,,,
 64.97577024,0.35,,,
 54.96230015,0.45,,,
