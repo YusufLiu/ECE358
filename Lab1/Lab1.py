@@ -31,7 +31,6 @@ def createDES(packetList,observerList):
     eventList = []
     for i in packetList:
         arrivalEvent = event("Arrival",i.arrivalTime)
-        #print(arrivalEvent.type)
         eventList.append(arrivalEvent)
         departureEvent = event("Departure",i.departureTime)
         eventList.append(departureEvent)
@@ -88,7 +87,7 @@ def generatePacketList(T,Lambda):
         packetSize = nextTime(1.0/12000.0)
         serviceTime = packetSize/1000000
         if(arrivalTime >= packetList[-1].departureTime):
-            #check if the queue is empty 
+            #check if the queue is empty
             departureTime = departureTime = arrivalTime+serviceTime
         else:
             #calculated the departure time base on the last packet departure time
@@ -147,19 +146,19 @@ def mergeSort(alist):
 
 
 def eventHandler(eventList):
-    NofArrival = 0
+    NofArrival = 0 # reset all the counters
     NofDeparture = 0
     NofObservation = 0
     NofIdle = 0
     packetInQueueCount = []
     for i in eventList:
-        if(i.type == "Arrival"):
-            NofArrival = NofArrival+1
+        if(i.type == "Arrival"):# checking the type of the event
+            NofArrival = NofArrival+1#updating the counter
         elif(i.type == "Departure"):
-            NofDeparture = NofDeparture+1
+            NofDeparture = NofDeparture+1#updating the counter
         else:
-            NofObservation = NofObservation + 1
-            packetCount = NofArrival-NofDeparture
+            NofObservation = NofObservation + 1#updating the counter
+            packetCount = NofArrival-NofDeparture#calculating the packet in queue
             if(packetCount>0):
                 packetCount = packetCount
             packetInQueueCount.append(packetCount)
@@ -246,33 +245,38 @@ def checkMeanVariance(Lambda):
     expectedVariance = expectedMean/Lambda
     print("Mean:" + str(mean) + " compare to " + str(expectedMean)+ "\n" + "Variance:" + str(variance)+ " compare to " + str(expectedVariance))
 
-def infiniteBuffer():
+def infiniteBuffer(T):
+    totalCSVResult = [['Average number of packets','The proportion of time the server is idle','Ro value']]
     for r in Ro:
         la = calculateLambda(r)
         checkMeanVariance(la)
         print(la)
-        packetsList = generatePacketList(1000,la)
+        packetsList = generatePacketList(T,la)
         sojournList = packetsList[1]
         packetsList = packetsList[0]
         timeLength = len(sojournList)
         sojournTime = sum(sojournList)/timeLength
-        observerList = generateObserverList(1000,la*2)
+        observerList = generateObserverList(T,la*2)
         print("starting")
         eventList = createDES(packetsList,observerList)
-        print("sorting")
         eventList = mergeSort(eventList)
-        print(len(eventList))
         result = eventHandler(eventList)
         E = float(sum(result[4]))
         L = float(len(result[4]))
-        print(sum(result[4]))
-        print(len(observerList))
         meanOfPacket = E/L
         Pidle = result[3]/L*100
         print("Average number of packets " + str(meanOfPacket))
         print("Average sojourn time "+str(sojournTime))
         print("The proportion of time the server is idle "+str(Pidle))
+        resultToCSV = [meanOfPacket,Pidle,r]
+        totalCSVResult.append(resultToCSV)
         print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+"\n")
+
+    with open("Lab1Q2ResultT=10000.csv", "wb") as f:
+        writer = csv.writer(f, delimiter = ',')
+        for row in totalCSVResult:
+             writer.writerow(row)
+
 
 
 def finiteBuffer(K):
@@ -302,11 +306,11 @@ def finiteBuffer(K):
 
 
 def main():
-    infiniteBuffer()
+    #checkMeanVariance(75.0)
+    infiniteBuffer(10000)
     K = 5
     #finiteBuffer(K)
 
-    #checkMeanVariance(75.0)
 
 
 if __name__ == '__main__':
