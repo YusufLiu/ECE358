@@ -294,9 +294,9 @@ def finiteBuffer(K):
             la = calculateLambda(r)
             checkMeanVariance(la)
             print(la)
-            packetsList = generatePacketListLimitK(10000,la)
+            packetsList = generatePacketListLimitK(1000,la)
             packetListSize = len(packetsList)*1.0
-            observerList = generateObserverList(10000,la*2)
+            observerList = generateObserverList(1000,la*2)
             print("starting")
             eventList = createDESK(packetsList,observerList)
             print("sorting")
