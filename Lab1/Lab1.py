@@ -294,9 +294,9 @@ def finiteBuffer(K):
             la = calculateLambda(r)
             checkMeanVariance(la)
             print(la)
-            packetsList = generatePacketListLimitK(100,la)
+            packetsList = generatePacketListLimitK(10000,la)
             packetListSize = len(packetsList)*1.0
-            observerList = generateObserverList(100,la*2)
+            observerList = generateObserverList(10000,la*2)
             print("starting")
             eventList = createDESK(packetsList,observerList)
             print("sorting")
@@ -317,7 +317,7 @@ def finiteBuffer(K):
             gc.collect()
 
 
-    with open("Lab1Q6ResultT=1000K=b.csv", "wb") as f:
+    with open("Lab1Q6ResultT=1000K=all.csv", "wb") as f:
         writer = csv.writer(f, delimiter = ',')
         for row in totalCSVResult:
              writer.writerow(row)
