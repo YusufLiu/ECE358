@@ -5,9 +5,14 @@ import argparse
 import math
 import random
 import csv
-
+import gc
 Ro  = [0.25+(i*0.1) for i in xrange(8)]
-RoK =[0.5+(i*0.1) for i in xrange(10)]
+RoK =[0.5+(i*0.1) for i in xrange(11)]
+Ro6K = [0.4+(i*0.1) for i in xrange(17)]
+Ro6bK = [2+(i*0.2) for i in xrange(16)]
+Ro6cK = [5+(i*0.4) for i in xrange(13)]
+RFinal = Ro6K +Ro6bK+Ro6cK
+
 
 class packet:
 
@@ -172,7 +177,7 @@ def saveAs(fileName, data):
         wr.writerows(data)
 
 def eventHandlerLimitK(eventList,K):
-    NofArrival = 0
+    NofArrival = 0 #Reset the counters
     NofDeparture = 0
     NofObservation = 0
     NofIdle = 0
@@ -184,17 +189,18 @@ def eventHandlerLimitK(eventList,K):
     lastDpIndex = 0
     while(eventList):
         i = eventList[0]
-        if(i.type == "Arrival"):
+        if(i.type == "Arrival"): #check the event type
             packetSize = nextTime(1.0/12000.0)
             serviceTime = packetSize/1000000
-            if (NofPacketInQueue < K+1):
-                if(NofPacketInQueue == 0):
+            if (NofPacketInQueue < K+1): #check if the queue is full
+                if(NofPacketInQueue == 0):#caclulate the departure time
                     departureTime = i.time + serviceTime
                     mostRecentDpartTime = departureTime
                 else:
                     departureTime = mostRecentDpartTime + serviceTime
                     mostRecentDpartTime = departureTime
                 departureEvent = event("Departure",departureTime)
+                #create a new departure event and insert to the event list.
                 resultList = departureInsert(eventList,departureEvent,lastDpIndex)
                 lastDpIndex = resultList[1]
                 eventList = resultList[0]
@@ -224,7 +230,6 @@ def departureInsert(eventList,departureEvent,dpIndex):
         return
 
     while(eventList[i].time < departureEvent.time):
-        #print("eventLength: "+ str(len(eventList))+ "i length = "+ str(i) + " Type: " + eventList[i].type + " T1: "+ str(eventList[i].time)+ " T2 :" +str(departureEvent.time))
         j = len(eventList) -1
         if(len(eventList) == 1):
             break
@@ -247,13 +252,16 @@ def checkMeanVariance(Lambda):
 
 def infiniteBuffer(T):
     totalCSVResult = [['Average number of packets','The proportion of time the server is idle','Ro value']]
+    #Ro = [0.9,0.95,1.0,1.1,1.2,1.3]
     for r in Ro:
         la = calculateLambda(r)
         checkMeanVariance(la)
         print(la)
         packetsList = generatePacketList(T,la)
+
         sojournList = packetsList[1]
         packetsList = packetsList[0]
+        print(len(packetsList))
         timeLength = len(sojournList)
         sojournTime = sum(sojournList)/timeLength
         observerList = generateObserverList(T,la*2)
@@ -272,7 +280,7 @@ def infiniteBuffer(T):
         totalCSVResult.append(resultToCSV)
         print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+"\n")
 
-    with open("Lab1Q2ResultT=10000.csv", "wb") as f:
+    with open("Lab1Q2ResultRo=1.2.csv", "wb") as f:
         writer = csv.writer(f, delimiter = ',')
         for row in totalCSVResult:
              writer.writerow(row)
@@ -280,36 +288,45 @@ def infiniteBuffer(T):
 
 
 def finiteBuffer(K):
-    la = calculateLambda(0.5)
-    checkMeanVariance(la)
-    print(la)
-    packetsList = generatePacketListLimitK(1000,la)
-    packetListSize = len(packetsList)*1.0
-    observerList = generateObserverList(1000,la*2)
-    print("starting")
-    eventList = createDESK(packetsList,observerList)
-    print("sorting")
-    eventList = mergeSort(eventList)
-    result = eventHandlerLimitK(eventList,K)
-    E = float(sum(result[5]))
-    L = float(len(result[5]))
-    print(sum(result[5]))
-    meanOfPacket = E/L
-    Pidle = result[3]/L*100
-    print("Average number of packets " + str(meanOfPacket))
-    print("The proportion of time the server is idle "+str(Pidle))
-    packetLoss = result[4]/packetListSize*100
-    print("The percentage of packet loss "+str(packetLoss))
-    print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+ " NofPacketLoss: "+ str(result[4]))
-    print(len(packetsList))
-    print(len(observerList))
+    totalCSVResult = [['Average number of packets','The percentage of packet loss','Ro value']]
+    for k in K:
+        for r in RFinal:
+            la = calculateLambda(r)
+            checkMeanVariance(la)
+            print(la)
+            packetsList = generatePacketListLimitK(100,la)
+            packetListSize = len(packetsList)*1.0
+            observerList = generateObserverList(100,la*2)
+            print("starting")
+            eventList = createDESK(packetsList,observerList)
+            print("sorting")
+            eventList = mergeSort(eventList)
+            result = eventHandlerLimitK(eventList,k)
+            E = float(sum(result[5]))
+            L = float(len(result[5]))
+            print(sum(result[5]))
+            meanOfPacket = E/L
+            Pidle = result[3]/L*100
+            print("Average number of packets " + str(meanOfPacket))
+            print("The proportion of time the server is idle "+str(Pidle))
+            packetLoss = result[4]/packetListSize*100
+            print("The percentage of packet loss "+str(packetLoss))
+            print("NofArrival: " + str(result[0])+ " NofDeparture: "+str(result[1])+ " NofObservation: "+str(result[2])+ " NofIdle: "+ str(result[3])+ " NofPacketLoss: "+ str(result[4]))
+            resultToCSV = [meanOfPacket,packetLoss,r]
+            totalCSVResult.append(resultToCSV)
+            gc.collect()
 
+
+    with open("Lab1Q6ResultT=1000K=b.csv", "wb") as f:
+        writer = csv.writer(f, delimiter = ',')
+        for row in totalCSVResult:
+             writer.writerow(row)
 
 def main():
-    #checkMeanVariance(75.0)
+    checkMeanVariance(75.0)
     infiniteBuffer(10000)
-    K = 5
-    #finiteBuffer(K)
+    K = [5,10,40]
+    finiteBuffer(K)
 
 
 
