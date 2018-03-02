@@ -26,14 +26,23 @@ class Event:
         self.sequence_number = sequence_number
 
 
-def ABPsender():
+def ABPsender(H,l):
     SN = 0
     next_expected_ack =(SN+1)%2
+    TimeOutTime=100
+    current_time = 0
+    # H is header length, l is packet length
+    packetLength = H+l
+    addTimeOutEvent()
     packet = getpacket()
-    sent(SN,packet,t)
+    send(SN,packet,t)
 
 
 def send(Time,SN,packet):
+    forwardChannel() # sender to recevier
+    receiver()
+    reverseChannel()# receiver to sender
+
 
 
 
