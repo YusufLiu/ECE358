@@ -8,6 +8,8 @@ import csv
 import gc
 
 
+BER = 0.01
+
 class Event:
     def __init(self,itype,time,error_flag,sequence_number):
         self.type= itype
@@ -106,16 +108,35 @@ def addTimeOutEvent(ES,time,SN):
     return mergeSort(ES)
 
 def send(Time,SN,packetLength):
-    forwardChannel() # sender to recevier
+    ploss = 0.2
+    propDelay = 0.1
+    #BER (the probability that a bit arrives in error, considered independently from one bit to another
+    #no error = (1-BER)^L
+    #Perror = sigma(k=1->4)*LchooseK*BER^k*(1-BER)^(L-k)
+    #PLoss = 1- Pnoerror - Perror
+    forwardChannel(Time,SN,packetLength) # sender to recevier
     receiver()
     reverseChannel()# receiver to sender
     ACKEvent = Event('ACKEvent',time,error_flag,SN)
     return
 
-def forwardChannel():
+def forwardChannel(Time,SN,packetLength):
+    i = 0
+    result = []
+    while(i < len(packetLength)):
+        i= i +1
+        result.append(generate01())
+    
+    
     
 
-
+def generate01():
+    number = random.random()
+    if(number <= BER):
+        return 0
+    else:
+        return 1
+        
 
 
 def main():
