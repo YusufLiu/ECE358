@@ -9,6 +9,7 @@ import gc
 
 
 BER = 0.01
+tor = 0.1
 
 class Event:
     def __init(self,itype,time,error_flag,sequence_number):
@@ -115,7 +116,7 @@ def send(Time,SN,packetLength):
     #Perror = sigma(k=1->4)*LchooseK*BER^k*(1-BER)^(L-k)
     #PLoss = 1- Pnoerror - Perror
     forwardChannel(Time,SN,packetLength) # sender to recevier
-    receiver()
+    ABPreceiver()
     reverseChannel()# receiver to sender
     ACKEvent = Event('ACKEvent',time,error_flag,SN)
     return
@@ -123,10 +124,31 @@ def send(Time,SN,packetLength):
 def forwardChannel(Time,SN,packetLength):
     i = 0
     result = []
+    status = ''
     while(i < len(packetLength)):
         i= i +1
         result.append(generate01())
+    errorCount = 0
+    for i in result:
+        if(i==0):
+            errorCount = errorCount+1
+    if(errorCount == 0):
+        return [Time+tor,0,SN]
+    else if(errorCount < 5):
+        return [Time+tor,1,SN]
+    else:
+        return [Time+tor,'NIL',SN]
     
+        
+def ABPreceiver(Time,Status,SN):
+    next_expected_ack =0
+    current_time = 0
+    if(Status == 0 and next_expected_ack = SN):
+        totalpacket = totalpacket +1
+        next_expected_ack = (next_expected_ack+1)%2
+    return ['ACK',H,next_expected_ack]
+        
+
     
     
 
