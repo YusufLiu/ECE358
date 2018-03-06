@@ -115,13 +115,13 @@ def send(Time,SN,packetLength):
     #no error = (1-BER)^L
     #Perror = sigma(k=1->4)*LchooseK*BER^k*(1-BER)^(L-k)
     #PLoss = 1- Pnoerror - Perror
-    forwardChannel(Time,SN,packetLength) # sender to recevier
-    ABPreceiver()
-    reverseChannel()# receiver to sender
+    Channel(Time,SN,packetLength) # sender to recevier
+    result = ABPreceiver()
+    result = reverseChannel(result[0],result[1],result[2])# receiver to sender
     ACKEvent = Event('ACKEvent',time,error_flag,SN)
     return
 
-def forwardChannel(Time,SN,packetLength):
+def Channel(Time,SN,packetLength):
     i = 0
     result = []
     status = ''
@@ -146,7 +146,9 @@ def ABPreceiver(Time,Status,SN):
     if(Status == 0 and next_expected_ack = SN):
         totalpacket = totalpacket +1
         next_expected_ack = (next_expected_ack+1)%2
-    return ['ACK',H,next_expected_ack]
+    current_time = Time
+    return [Time,next_expected_ack,H]
+
         
 
     
