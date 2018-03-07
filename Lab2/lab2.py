@@ -8,8 +8,9 @@ import csv
 import gc
 
 
-BER = 0.01
-tor = 0.1
+BER = 0
+tor = 0.005
+totalpacket= 0
 
 class Event:
     def __init(self,itype,time,error_flag,sequence_number):
@@ -50,7 +51,7 @@ def mergeSort(alist):
             k=k+1
     return alistz       
 
-def ABPsender(H,l,C):
+def ABPsender(H,l,C,timeOut):
     # initialization
     ES = []
     SN = 0
@@ -115,11 +116,13 @@ def send(Time,SN,packetLength):
     #no error = (1-BER)^L
     #Perror = sigma(k=1->4)*LchooseK*BER^k*(1-BER)^(L-k)
     #PLoss = 1- Pnoerror - Perror
-    Channel(Time,SN,packetLength) # sender to recevier
-    result = ABPreceiver()
+    result = Channel(Time,SN,packetLength) # sender to recevier
+    result = ABPreceiver(result[0],result[1],result[2])
     result = reverseChannel(result[0],result[1],result[2])# receiver to sender
-    ACKEvent = Event('ACKEvent',time,error_flag,SN)
-    return
+    if(result[1] == 'NIL')
+        return Event('NIL',result[0],1,result[2])
+    else:
+        return Event('ACKEvent',result[0],result[1],result[2])
 
 def Channel(Time,SN,packetLength):
     i = 0
@@ -148,12 +151,7 @@ def ABPreceiver(Time,Status,SN):
         next_expected_ack = (next_expected_ack+1)%2
     current_time = Time
     return [Time,next_expected_ack,H]
-
-        
-
     
-    
-
 def generate01():
     number = random.random()
     if(number <= BER):
@@ -164,7 +162,9 @@ def generate01():
 
 
 def main():
-    print("hey,60 boy")
+    print(totalpacket)
+    ABPsender(54*8,1500*8,5000000,2.5*tor)
+    print(totalpacket)
 
 if __name__ == '__main__':
     main()
