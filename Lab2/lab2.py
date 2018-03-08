@@ -11,6 +11,7 @@ import gc
 BER = 0
 tor = 0.005
 totalpacket= 0
+next_expected_ack_Receiver = 0 
 
 class Event:
     def __init(self,itype,time,error_flag,sequence_number):
@@ -96,6 +97,70 @@ def ABPsender(H,l,C,timeOut):
                     ES = mergeSort(ES)    
 
 
+def GBNsender(H,l,C,timeOut,N):
+    ES = []
+    M = []
+    SN = []
+    L = [] 
+    T = []
+    current_time = 0
+    SN[1] = 0
+    L[1] = H+l
+    T[1] = current_time + L[1]/C 
+    M[0] = [SN[1],L[1],T[1]]  
+    for i in range(2,N):
+        SN[i] = SN([i-1] +1)%(N+1)
+        L[i] = H + l
+        T[i] = T[i-1] + L[i]/C
+        M[i-1] = [SN[i],L[i],T[1]]
+    p = 0   
+    TimeOutTime=timeOut
+    TimeOutEvent = M[p][2] +TimeOutTime
+    ES = addTimeOutEvent(ES,TimeOutEvent,M[p][0])
+    p=p+1
+    result = sendGBN(SN,packetLength,current_time)
+    if(result.type != 'NIL'):
+        ES.append(result)
+        ES = mergeSort(ES)
+    while(ES):
+        i = ES[0]
+        while(current_time<i.time):
+            ES = addTimeOutEvent(ES,TimeOutEvent,M[p][0]])
+            result = sendGBN(M[p][0]],packetLength,current_time)
+            if(result.type != 'NIL'):
+                ES.append(result)
+                ES = mergeSort(ES)
+            current_time = current_time +  M[p][1]
+            p = (p+1)%N 
+        
+        ES.remove(i)
+        #TODO update current time
+        if(i.type == 'TimeOutEvent'):
+            TimeOutEvent = current_time+packetLength/C+TimeOutTime
+            ES = addTimeOutEvent(ES,TimeOutEvent,SN) 
+            result = send(SN,packetLength,current_time)
+            if(result.type != 'NIL'):
+                ES.append(result)
+                ES = mergeSort(ES)
+        else if (i.type == 'ACKEvent'):
+            #packet send and received correctly
+            if(i.error_flag == 0 and next_expected_ack == i.sequence_number):
+                if(SN<2):
+                    SN = SN + 1
+                else:
+                    SN = 0
+                next_expected_ack =(SN+1)%2
+                ES = clearTimeOutEvent(ES)
+                TimeOutEvent = current_time+packetLength/C+TimeOutTime
+                ES = addTimeOutEvent(ES,TimeOutEvent,SN) 
+                result = send(SN,packetLength,current_time)
+                if(result.type != 'NIL'):
+                    ES.append(result)
+                    ES = mergeSort(ES)    
+
+
+    packetLength = H+l    
+
 def clearTimeOutEvent(ES):
     for i in ES:
         if(i.type == 'TimeOutEvent'):
@@ -118,7 +183,18 @@ def send(Time,SN,packetLength):
     #PLoss = 1- Pnoerror - Perror
     result = Channel(Time,SN,packetLength) # sender to recevier
     result = ABPreceiver(result[0],result[1],result[2])
-    result = reverseChannel(result[0],result[1],result[2])# receiver to sender
+    result = Channel(result[0],result[1],result[2])# receiver to sender
+    if(result[1] == 'NIL')
+        return Event('NIL',result[0],1,result[2])
+    else:
+        return Event('ACKEvent',result[0],result[1],result[2])
+
+def sendGBN(Time,SN,packetLength):
+    ploss = 0.2
+    propDelay = 0.1
+    result = Channel(Time,SN,packetLength) # sender to recevier
+    result = ABPreceiver(result[0],result[1],result[2])
+    result = Channel(result[0],result[1],result[2])# receiver to sender
     if(result[1] == 'NIL')
         return Event('NIL',result[0],1,result[2])
     else:
@@ -144,13 +220,12 @@ def Channel(Time,SN,packetLength):
     
         
 def ABPreceiver(Time,Status,SN):
-    next_expected_ack =0
     current_time = 0
-    if(Status == 0 and next_expected_ack = SN):
+    if(Status == 0 and next_expected_ack_Receiver = SN):
         totalpacket = totalpacket +1
-        next_expected_ack = (next_expected_ack+1)%2
+        next_expected_ack_Receiver = (next_expected_ack_Receiver+1)%2
     current_time = Time
-    return [Time,next_expected_ack,H]
+    return [Time,next_expected_ack_Receiver,H]
     
 def generate01():
     number = random.random()
