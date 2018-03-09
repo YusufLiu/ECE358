@@ -24,6 +24,7 @@ next_expected_ack_Receiver = 0
 H=54*8
 current_time = 0
 timeoutError = 0
+C=5000000
 
 class Event:
     def __init__(self,itype,time,error_flag,sequence_number):
@@ -69,8 +70,6 @@ def ABPsender(H,l,C,timeOut,tor,BER):
     ES = []
     SN = 0
     next_expected_ack =(SN+1)%2
-    TimeOutTime=timeOut
-    #print(TimeOutTime)
     global current_time
     current_time = 0
     packetLength = H+l
@@ -79,32 +78,31 @@ def ABPsender(H,l,C,timeOut,tor,BER):
     global next_expected_ack_Receiver
     totalpacket= 0
     next_expected_ack_Receiver = 0
+    timeoutCounter = 0
     # H is header length, l is packet length
-
-    TimeOutEvent = current_time+packetLength/C+TimeOutTime
     current_time = current_time+packetLength/C
+    TimeOutEvent = current_time+timeOut
     ES = addTimeOutEvent(ES,TimeOutEvent,SN)
     result = send(current_time,SN,packetLength,BER,tor)
-    current_time = H/C+result.time
+    current_time = result.time+H/C
     #print(result.type)
     if(result.type != 'NIL'):
         ES.append(result)
         ES = mergeSort(ES)
     #print("shoule be 2: " + str(len(ES)))
-    while(totalpacket<1000):
+    while(totalpacket<5000):
         i = ES[0]
         #print(i.type)
         #print("current loop number:" + str(test))
-        #TODO update current time
         if(i.type == 'TimeOutEvent'):
             #print(len(ES))
             #print("process time out")
-            TimeOutEvent = current_time+packetLength/C+TimeOutTime
+            timeoutCounter = timeoutCounter + 1
+            TimeOutEvent = current_time+packetLength/C+timeOut
             ES = clearTimeOutEvent(ES)
-            ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-            current_time = current_time+packetLength/C
-            result = send(current_time,SN,packetLength,BER,tor)
-            current_time =H/C+result.time
+            ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
+            current_time = i.time+packetLength/C
+            result = send(current_time,i.sequence_number,packetLength,BER,tor)
             if(result.type != 'NIL'):
                 ES.append(result)
                 ES = mergeSort(ES)
@@ -119,15 +117,15 @@ def ABPsender(H,l,C,timeOut,tor,BER):
                     SN = 0
                 next_expected_ack =(SN+1)%2
                 ES = clearTimeOutEvent(ES)
-                TimeOutEvent = current_time+packetLength/C+TimeOutTime
+                current_time = i.time+packetLength/C
+                TimeOutEvent = current_time+timeOut
                 ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-                current_time = current_time+packetLength/C
                 result = send(current_time,SN,packetLength,BER,tor)
-                current_time = H/C+result.time
                 if(result.type != 'NIL'):
                     ES.append(result)
                     ES = mergeSort(ES)
             ES.remove(i)
+    print("TimeOutCounter:" + str(timeoutCounter)    )
 
 
 
@@ -304,11 +302,11 @@ def send(Time,SN,packetLength,BER,tor):
     result = Channel(result[0],result[1],result[2],BER,tor)# receiver to sender
     #print('SN#'+str(result[1]))
     if(timeoutError ==1):
-        resend = 1
         timeoutError = 0
+        return Event('ACKEvent',result[0],1,result[2])
 
     if(resend == 1):
-        return Event('ACKEvent',result[0],1,result[2])
+        return Event('NIL',result[0],1,result[2])
 
     if(result[1] == 'NIL'):
         #print('ack loss')
@@ -353,16 +351,16 @@ def Channel(Time,SN,packetLength,BER,tor):
 
 
 def ABPreceiver(Time,Status,SN):
-    current_time = 0
     global totalpacket
     global next_expected_ack_Receiver
     #print('current'+str(next_expected_ack_Receiver))
     #print(SN)
+    global current_time
+    current_time = Time+H/C
     if(Status == 0 and next_expected_ack_Receiver == SN):
         totalpacket = totalpacket+1
         next_expected_ack_Receiver = (next_expected_ack_Receiver+1)%2
-    current_time = Time
-    return [Time,next_expected_ack_Receiver,H]
+    return [current_time,next_expected_ack_Receiver,H]
 
 def generate01(BER):
     number = random.random()
@@ -377,7 +375,7 @@ def main():
     print(totalpacket)
     for i in timeOutList5ms:
         for z in BER:
-            ABPsender(54*8,1500*8,5000000,i,tor[0],z)
+            ABPsender(H,1500*8,C,i,tor[0],z)
             print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time))
 
 
