@@ -73,6 +73,7 @@ def ABPsender(H,l,C,timeOut,tor,BER):
     global current_time
     current_time = 0
     packetLength = H+l
+    totalPacket = 1
 
     global totalpacket
     global next_expected_ack_Receiver
@@ -90,7 +91,7 @@ def ABPsender(H,l,C,timeOut,tor,BER):
         ES.append(result)
         ES = mergeSort(ES)
     #print("shoule be 2: " + str(len(ES)))
-    while(totalpacket<5000):
+    while(totalpacket<100):
         i = ES[0]
         #print(i.type)
         #print("current loop number:" + str(test))
@@ -103,6 +104,7 @@ def ABPsender(H,l,C,timeOut,tor,BER):
             ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
             current_time = i.time+packetLength/C
             result = send(current_time,i.sequence_number,packetLength,BER,tor)
+            totalpacket = totalpacket+1
             if(result.type != 'NIL'):
                 ES.append(result)
                 ES = mergeSort(ES)
@@ -121,11 +123,13 @@ def ABPsender(H,l,C,timeOut,tor,BER):
                 TimeOutEvent = current_time+timeOut
                 ES = addTimeOutEvent(ES,TimeOutEvent,SN)
                 result = send(current_time,SN,packetLength,BER,tor)
+                totalpacket = totalpacket+1
                 if(result.type != 'NIL'):
                     ES.append(result)
                     ES = mergeSort(ES)
             ES.remove(i)
     print("TimeOutCounter:" + str(timeoutCounter)    )
+    return totalpacket
 
 
 
@@ -239,7 +243,6 @@ def GBNsender(H,l,C,timeOut,N):
             p = (p+1)%N
 
         ES.remove(i)
-        #TODO update current time
         if(i.type == 'TimeOutEvent'):
             TimeOutEvent = current_time+packetLength/C+TimeOutTime
             ES = addTimeOutEvent(ES,TimeOutEvent,SN)
@@ -272,6 +275,7 @@ def clearTimeOutEvent(ES):
             ES.remove(i)
 
     return ES
+
 
 
 def addTimeOutEvent(ES,time,SN):
@@ -369,12 +373,16 @@ def generate01(BER):
 
 
 def main():
-    print(totalpacket)
+    #ABP
     for i in timeOutList5ms:
         for z in BER:
-            ABPsenderNACK(H,1500*8,C,i,tor[0],z)
-            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time))
-
+            totalPacket = ABPsender(H,1500*8,C,i,tor[0],z)
+            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalPacket*1500*8/current_time))
+    for i in timeOutList5ms:
+        for z in BER:
+            totalPacket = ABPsender(H,1500*8,C,i,tor[1],z)
+            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalPacket*1500*8/current_time))
+    #ABP
 
 if __name__ == '__main__':
     main()
