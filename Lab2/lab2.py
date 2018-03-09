@@ -134,8 +134,6 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
     ES = []
     SN = 0
     next_expected_ack =(SN+1)%2
-    TimeOutTime=timeOut
-    #print(TimeOutTime)
     global current_time
     current_time = 0
     packetLength = H+l
@@ -144,37 +142,35 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
     global next_expected_ack_Receiver
     totalpacket= 0
     next_expected_ack_Receiver = 0
+    timeoutCounter = 0
     # H is header length, l is packet length
-
-    test =0
-
-    TimeOutEvent = current_time+packetLength/C+TimeOutTime
     current_time = current_time+packetLength/C
+    TimeOutEvent = current_time+timeOut
     ES = addTimeOutEvent(ES,TimeOutEvent,SN)
     result = send(current_time,SN,packetLength,BER,tor)
-    current_time = H/C+result.time
+    current_time = result.time+H/C
     #print(result.type)
     if(result.type != 'NIL'):
         ES.append(result)
         ES = mergeSort(ES)
-    while(totalpacket<500):
+    #print("shoule be 2: " + str(len(ES)))
+    while(totalpacket<5000):
         i = ES[0]
         #print(i.type)
-        test = test +1
         #print("current loop number:" + str(test))
-        ES.remove(i)
-        #TODO update current time
         if(i.type == 'TimeOutEvent'):
-            print("process time out")
-            TimeOutEvent = current_time+packetLength/C+TimeOutTime
+            #print(len(ES))
+            #print("process time out")
+            timeoutCounter = timeoutCounter + 1
+            TimeOutEvent = current_time+packetLength/C+timeOut
             ES = clearTimeOutEvent(ES)
-            ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-            current_time = current_time+packetLength/C
-            result = send(current_time,SN,packetLength,BER,tor)
-            current_time =H/C+result.time
+            ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
+            current_time = i.time+packetLength/C
+            result = send(current_time,i.sequence_number,packetLength,BER,tor)
             if(result.type != 'NIL'):
                 ES.append(result)
                 ES = mergeSort(ES)
+            #print(len(ES))
         elif (i.type == 'ACKEvent'):
             #print("process ack")
             #packet send and received correctly
@@ -185,24 +181,25 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
                     SN = 0
                 next_expected_ack =(SN+1)%2
                 ES = clearTimeOutEvent(ES)
-                TimeOutEvent = current_time+packetLength/C+TimeOutTime
+                current_time = i.time+packetLength/C
+                TimeOutEvent = current_time+timeOut
                 ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-                current_time = current_time+packetLength/C
                 result = send(current_time,SN,packetLength,BER,tor)
-                current_time = H/C+result.time
                 if(result.type != 'NIL'):
                     ES.append(result)
                     ES = mergeSort(ES)
-            elif(i.error_flag == 1):
-                TimeOutEvent = current_time+packetLength/C+TimeOutTime
+            elif(i.error_flag == 1 or next_expected_ack != i.sequence_number):
                 ES = clearTimeOutEvent(ES)
+                current_time = i.time+packetLength/C
+                TimeOutEvent = current_time+timeOut
                 ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-                current_time = current_time+packetLength/C
                 result = send(current_time,SN,packetLength,BER,tor)
-                current_time =H/C+result.time
                 if(result.type != 'NIL'):
                     ES.append(result)
                     ES = mergeSort(ES)
+            ES.remove(i)
+
+    print("TimeOutCounter:" + str(timeoutCounter)    )
 
 
 def GBNsender(H,l,C,timeOut,N):
@@ -375,7 +372,7 @@ def main():
     print(totalpacket)
     for i in timeOutList5ms:
         for z in BER:
-            ABPsender(H,1500*8,C,i,tor[0],z)
+            ABPsenderNACK(H,1500*8,C,i,tor[0],z)
             print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time))
 
 
