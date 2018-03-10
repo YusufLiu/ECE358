@@ -99,10 +99,10 @@ def ABPsender(H,l,C,timeOut,tor,BER):
             #print(len(ES))
             #print("process time out")
             timeoutCounter = timeoutCounter + 1
-            TimeOutEvent = current_time+packetLength/C+timeOut
+            current_time = i.time+packetLength/C
+            TimeOutEvent = current_time+timeOut
             ES = clearTimeOutEvent(ES)
             ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
-            current_time = i.time+packetLength/C
             result = send(current_time,i.sequence_number,packetLength,BER,tor)
             totalSend = totalSend+1
             if(result.type != 'NIL'):
@@ -166,10 +166,10 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
             #print(len(ES))
             #print("process time out")
             timeoutCounter = timeoutCounter + 1
-            TimeOutEvent = current_time+packetLength/C+timeOut
+            current_time = i.time+packetLength/C
+            TimeOutEvent = current_time+timeOut
             ES = clearTimeOutEvent(ES)
             ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
-            current_time = i.time+packetLength/C
             result = send(current_time,i.sequence_number,packetLength,BER,tor)
             totalSend = totalSend+1
             if(result.type != 'NIL'):
@@ -329,10 +329,10 @@ def GBNsender(H,l,C,timeOut,tor,BER):
             #print(len(ES))
             #print("process time out")
             timeoutCounter = timeoutCounter + 1
-            TimeOutEvent = current_time+packetLength/C+timeOut
+            current_time = i.time+packetLength/C
+            TimeOutEvent = current_time+timeOut
             ES = clearTimeOutEvent(ES)
             ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
-            current_time = i.time+packetLength/C
             result = send(current_time,i.sequence_number,packetLength,BER,tor)
             totalpacket = totalpacket+1
             if(result.type != 'NIL'):
