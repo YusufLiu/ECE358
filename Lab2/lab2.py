@@ -307,14 +307,22 @@ def GBNsender(H,l,C,timeOut,tor,BER):
 
     SN[1] = 0
     L[1] = packetLength
-
     T[1] = current_time + L[1]/C
+    M[0] = [SN[1],L[1],T[1]]
 
+    for i in range(2,N):
+        SN[i] = SN([i-1] +1)%(N+1)
+        L[i] = packetLength
+        T[i] = T[i-1] + L[i]/C
+        M[i-1] = [SN[i],L[i],T[1]]
+    p = 0
+    currentLocInQ = 0
     # H is header length, l is packet length
     current_time = current_time+packetLength/C
     TimeOutEvent = current_time+timeOut
-    ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-    result = send(current_time,SN,packetLength,BER,tor)
+    ES = addTimeOutEvent(ES,TimeOutEvent,M[p][0])
+    result = sendGBN(current_time,SN,packetLength,BER,tor)
+    currentLocInQ = currentLocInQ +1
     current_time = result.time+H/C
     #print(result.type)
     if(result.type != 'NIL'):
@@ -324,17 +332,30 @@ def GBNsender(H,l,C,timeOut,tor,BER):
     while(totalpacket<100):
         i = ES[0]
         #print(i.type)
+
+        while(current_time<i.time):
+            current_time = current_time+packetLength/C
+            TimeOutEvent = current_time+timeOut
+            result = sendGBN(M[currentLocInQ][0],packetLength,current_time)
+            currentLocInQ = currentLocInQ +1 
+            if(result.type != 'NIL'):
+                ES.append(result)
+                ES = mergeSort(ES)
+            current_time = result.time
+            #p = (p+1)%N
         #print("current loop number:" + str(test))
         if(i.type == 'TimeOutEvent'):
             #print(len(ES))
-            #print("process time out")
+            #print("process time out")            
             timeoutCounter = timeoutCounter + 1
             current_time = i.time+packetLength/C
             TimeOutEvent = current_time+timeOut
             ES = clearTimeOutEvent(ES)
             ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
-            result = send(current_time,i.sequence_number,packetLength,BER,tor)
-            totalpacket = totalpacket+1
+            if(M[p][0]==i.sequence_number):
+                currentLocInQ = p
+            result = sendGBN(current_time,i.sequence_number,packetLength,BER,tor)
+            currentLocInQ = currentLocInQ +1
             if(result.type != 'NIL'):
                 ES.append(result)
                 ES = mergeSort(ES)
@@ -342,16 +363,15 @@ def GBNsender(H,l,C,timeOut,tor,BER):
         elif (i.type == 'ACKEvent'):
             #print("process ack")
             #packet send and received correctly
-            if(i.error_flag == 0 and next_expected_ack == i.sequence_number):
-                if(SN<1):
-                    SN = SN + 1
-                else:
-                    SN = 0
-                next_expected_ack =(SN+1)%2
+            acceptableRN = [(p+1)%5,(p+2)%5,(p+3)%5,(p+4)%5]
+            if(i.error_flag == 0 and  i.sequence_number in acceptableRN):
+                slideSize = (i.sequence_number-p)5
                 ES = clearTimeOutEvent(ES)
+                M = shiftAndFill(M,slideSize)
+                currentLocInQ = 0
                 current_time = i.time+packetLength/C
                 TimeOutEvent = current_time+timeOut
-                ES = addTimeOutEvent(ES,TimeOutEvent,SN)
+                ES = addTimeOutEvent(ES,TimeOutEvent,M[p][0])
                 result = send(current_time,SN,packetLength,BER,tor)
                 totalpacket = totalpacket+1
                 if(result.type != 'NIL'):
@@ -411,15 +431,38 @@ def send(Time,SN,packetLength,BER,tor):
         #print('ACKtime:'+str(result[0]))
         return Event('ACKEvent',result[0],result[1],result[2])
 
-def sendGBN(Time,SN,packetLength):
-    ploss = 0.2
-    propDelay = 0.1
-    result = Channel(Time,SN,packetLength) # sender to recevier
-    result = ABPreceiver(result[0],result[1],result[2])
-    result = Channel(result[0],result[1],result[2])# receiver to sender
+def sendGBN(Time,SN,packetLength,BER,tor):
+    #print('SN#'+str(SN))
+    #print("going to forward channel")
+    #print('SN#'+str(SN))
+    global timeoutError
+    resend = 0
+    result = Channel(Time,SN,packetLength,BER,tor) # sender to recevier
+    #print("going to recevier")
     if(result[1] == 'NIL'):
+        resend = 1
+        #print('packetloss')
+    if(timeoutError ==1):
+        resend = 1
+        timeoutError = 0
+
+    result = GBNreceiver(result[0],result[1],result[2])
+    #print("going to reversal channel")
+    result = Channel(result[0],result[1],result[2],BER,tor)# receiver to sender
+    #print('SN#'+str(result[1]))
+    if(timeoutError ==1):
+        timeoutError = 0
+        return Event('ACKEvent',result[0],1,result[2])
+
+    if(resend == 1):
+        return Event('NIL',result[0],1,result[2])
+
+    if(result[1] == 'NIL'):
+        #print('ack loss')
         return Event('NIL',result[0],1,result[2])
     else:
+        #print('SN:'+str(SN))
+        #print('ACKtime:'+str(result[0]))
         return Event('ACKEvent',result[0],result[1],result[2])
 
 def Channel(Time,SN,packetLength,BER,tor):
@@ -457,6 +500,19 @@ def ABPreceiver(Time,Status,SN):
     if(Status == 0 and next_expected_ack_Receiver == SN):
         totalpacket = totalpacket+1
         next_expected_ack_Receiver = (next_expected_ack_Receiver+1)%2
+    return [current_time,next_expected_ack_Receiver,H]
+
+def GBNreceiver(Time,Status,SN):
+    global totalpacket
+    global next_expected_ack_Receiver
+    #print('current'+str(next_expected_ack_Receiver))
+    #print('SN:'+str(SN))
+    #print('recievetime:'+str(Time))
+    global current_time
+    current_time = Time+H/C
+    if(Status == 0 and next_expected_ack_Receiver == SN):
+        totalpacket = totalpacket+1
+        next_expected_ack_Receiver = (next_expected_ack_Receiver+1)%N
     return [current_time,next_expected_ack_Receiver,H]
 
 def generate01(BER):
