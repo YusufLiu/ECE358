@@ -11,7 +11,7 @@ N=4
 
 BER =  [0,0.00001,0.0001]
 tor = [0.005,0.25]
-ratio = [2.5,5,7.5,10,12.5]
+ratio = [2.5,5.0,7.5,10.0,12.5]
 timeOutList5ms = []
 timeOutList250ms = []
 for i in ratio:
@@ -22,10 +22,10 @@ for i in ratio:
 
 totalpacket= 0
 next_expected_ack_Receiver = 0
-H=54*8
+H=54*8.0
 current_time = 0
 timeoutError = 0
-C=5000000
+C=5000000.0
 
 p_GBN_Receiver = 0
 
@@ -113,8 +113,9 @@ def ABPsender(H,l,C,timeOut,tor,BER):
                 ES = mergeSort(ES)
             #print(len(ES))
         elif (i.type == 'ACKEvent'):
-            #print("process ack")
+            print("process ack")
             #packet send and received correctly
+            print(current_time)
             if(i.error_flag == 0 and next_expected_ack == i.sequence_number):
                 if(SN<1):
                     SN = SN + 1
@@ -131,8 +132,9 @@ def ABPsender(H,l,C,timeOut,tor,BER):
                     ES.append(result)
                     ES = mergeSort(ES)
             ES.remove(i)
+
     print("TimeOutCounter:" + str(timeoutCounter)    )
-    print(current_time)
+    current_time = current_time+tor
     return current_time
 
 
@@ -214,7 +216,7 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
     return totalSend
 
 
-   
+
 
 def GBNsender(H,l,C,timeOut,tor,BER):
     # initialization
@@ -241,7 +243,8 @@ def GBNsender(H,l,C,timeOut,tor,BER):
 
     SN.append(0)
     L.append(packetLength)
-    T.append(current_time + L[1]/C)
+    print(packetLength)
+    T.append(current_time + packetLength/C)
     M.append([SN[1],L[1],T[1]])
 
     for i in range(2,N+1):
@@ -249,7 +252,7 @@ def GBNsender(H,l,C,timeOut,tor,BER):
         L.append(packetLength)
         T.append(T[i-1] + L[i]/C)
         M.append([SN[i],L[i],T[i]])
-    
+
     print(M)
     p = 0
     #queueFull = 0
@@ -262,7 +265,7 @@ def GBNsender(H,l,C,timeOut,tor,BER):
     #print(result.type)
     if(result.type != 'NIL'):
         ES.append(result)
-        ES = mergeSort(ES)    
+        ES = mergeSort(ES)
     # H is header length, l is packet length
     while(packetInQ < 4):
         current_time = current_time+packetLength/C
@@ -278,15 +281,15 @@ def GBNsender(H,l,C,timeOut,tor,BER):
     print(len(ES))
     print('EVENT in ES')
     # for z in ES:
-    #     print ('type:'+str(z.type)+' time:'+str(z.time)+' SN:'+str(z.sequence_number))    
+    #     print ('type:'+str(z.type)+' time:'+str(z.time)+' SN:'+str(z.sequence_number))
     #print("shoule be 2: " + str(len(ES)))
     while(totalpacket<1000):
         i = ES[0]
         print(i.type)
-            
-  
-         
-        print('current_time: ' + str(current_time) + " event time: "+str(i.time))
+
+
+
+        # print('current_time: ' + str(current_time) + " event time: "+str(i.time))
         while(current_time<= i.time and packetInQ < 4):
             current_time = current_time+packetLength/C
             transTime = current_time
@@ -296,20 +299,20 @@ def GBNsender(H,l,C,timeOut,tor,BER):
                 ES.append(result)
                 ES = mergeSort(ES)
             current_time = transTime
-        
-        print('current_time: ' + str(current_time) + " event time: "+str(i.time))
+
+        # print('current_time: ' + str(current_time) + " event time: "+str(i.time))
 
         # print('EVENT in ES')
         # for z in ES:
         #     print ('type:'+str(z.type)+' time:'+str(z.time)+' SN:'+str(z.sequence_number))
-          
+
             #p = (p+1)%N
         #print("current loop number:" + str(test))
         if(i.type == 'TimeOutEvent'):
             #print(len(ES))
-            #print("process time out")  
-            print("process timeout time:" + str(i.time))
-            print("SN being processed:"+str(i.sequence_number))          
+            #print("process time out")
+            # print("process timeout time:" + str(i.time))
+            # print("SN being processed:"+str(i.sequence_number))
             timeoutCounter = timeoutCounter + 1
             current_time = i.time+packetLength/C
             TimeOutEvent = current_time+timeOut
@@ -324,34 +327,34 @@ def GBNsender(H,l,C,timeOut,tor,BER):
             for r in range(1,4):
                 M[r][2] = M[r-1][2]+packetLength/C
 
-            p_GBN_Receiver = i.sequence_number 
-            p=i.sequence_number 
+            p_GBN_Receiver = i.sequence_number
+            p=i.sequence_number
             result = sendGBN(current_time,i.sequence_number,packetLength,BER,tor)
             packetInQ=1
-            
+
 
             if(result.type != 'NIL'):
                 print("succusseful resend")
                 ES.append(result)
                 ES = mergeSort(ES)
-            
+
             #print(len(ES))
         elif (i.type == 'ACKEvent'):
-            print("process ack time:" + str(i.time))
-            print("SN being processed:"+str(i.sequence_number))
-           
+            # print("process ack time:" + str(i.time))
+            # print("SN being processed:"+str(i.sequence_number))
+
             #packet send and received correctly
             acceptableRN = [(p+1)%5,(p+2)%5,(p+3)%5,(p+4)%5]
-            print('acceptableRN:' + str(acceptableRN))
+            # print('acceptableRN:' + str(acceptableRN))
             if(i.error_flag == 0 and  i.sequence_number in acceptableRN):
                 slideSize = (i.sequence_number-p)%5
                 ES = clearTimeOutEvent(ES)
-                newQ = shiftAndFill(M,slideSize,i.time,SN,T,L) 
+                newQ = shiftAndFill(M,slideSize,i.time,SN,T,L)
                 M = newQ[0]
-                print('New M:')
-                print(M)
+                # print('New M:')
+                # print(M)
                 SN = newQ[1]
-                T = newQ[2]               
+                T = newQ[2]
                 p = M[0][0]
                 packetInQ = 4-slideSize
                 current_time = i.time
@@ -362,12 +365,12 @@ def GBNsender(H,l,C,timeOut,tor,BER):
                 # while(packetInQ<4 and M[packetInQ][2]< current_time):
                 #     result = sendGBN(current_time,M[packetInQ][0],packetLength,BER,tor)
                 #     packetInQ = packetInQ +1
-                
 
-                
+
+
             ES.remove(i)
-    print("TimeOutCounter:" + str(timeoutCounter)    )
-    print(current_time)
+    # print("TimeOutCounter:" + str(timeoutCounter)    )
+    # print(current_time)
     return totalpacket
 
 
@@ -397,7 +400,7 @@ def shiftAndFill(M,slideSize,current_time,SN,T,L):
         else:
            T.append( T[i-1] + L[i]/C)
         M.append([SN[i+1],L[i+1],T[i+1]])
-        
+
     # for i in range(2,5):
     #     SN[i] = (SN[i-1] +1)%(5)
     #     L[i] = L[1]
@@ -551,12 +554,12 @@ def generate01(BER):
 
 
 def main():
-    # #ABP
-    # global totalpacket
+    #ABP
+    global totalpacket
     # print("ABP Simulation Results")
     # for i in timeOutList5ms:
     #     for z in BER:
-    #         totalsend = ABPsender(H,1500*8,C,i,tor[0],z)
+    #         totalsend = ABPsender(H,1500.0*8,C,i,tor[0],z)
     #         print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
     # for i in timeOutList5ms:
     #     for z in BER:
@@ -574,8 +577,9 @@ def main():
     #         print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
     # #GBN
     print("GBN Simulation Results")
-    t1 = ABPsender(H,1500*8,C,0.0125,tor[0],0.00001)
-    totalsend = GBNsender(H,1500*8,C,0.0125,tor[0],0.00001)
+    t1 = ABPsender(H,1500*8,C,0.0125,tor[0],0)
+    #totalsend = GBNsender(H,1500*8,C,0.0125,tor[0],0)
+    #print('Throughput:' + str(1000*1500*8/current_time))
     print(t1)
 if __name__ == '__main__':
     main()
