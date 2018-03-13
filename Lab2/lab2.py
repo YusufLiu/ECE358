@@ -27,6 +27,11 @@ current_time = 0
 timeoutError = 0
 C=5000000.0
 
+
+Ploss=0
+Perror=0
+Pgood=0
+
 p_GBN_Receiver = 0
 
 class Event:
@@ -145,6 +150,12 @@ def ABPsender(H,l,C,timeOut,tor,BER):
 
 def ABPsenderNACK(H,l,C,timeOut,tor,BER):
     # initialization
+    global Ploss
+    global Perror
+    global Pgood
+    Ploss=0
+    Perror=0
+    Pgood=0
     ES = []
     SN = 0
     next_expected_ack =(SN+1)%2
@@ -162,7 +173,7 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
     current_time = current_time+packetLength/C
     TimeOutEvent = current_time+timeOut
     ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-    result = send(current_time,SN,packetLength,BER,tor)
+    result = sendNACK(current_time,SN,packetLength,BER,tor)
     current_time = result.time+H/C
     #print(result.type)
     if(result.type != 'NIL'):
@@ -181,8 +192,8 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
             TimeOutEvent = current_time+timeOut
             ES = clearTimeOutEvent(ES)
             ES = addTimeOutEvent(ES,TimeOutEvent,i.sequence_number)
-            result = send(current_time,i.sequence_number,packetLength,BER,tor)
-            totalSend = totalSend+1
+            result = sendNACK(current_time,i.sequence_number,packetLength,BER,tor)
+
             if(result.type != 'NIL'):
                 ES.append(result)
                 ES = mergeSort(ES)
@@ -200,17 +211,17 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
                 current_time = i.time+packetLength/C
                 TimeOutEvent = current_time+timeOut
                 ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-                result = send(current_time,SN,packetLength,BER,tor)
-                totalSend = totalSend+1
+                result = sendNACK(current_time,SN,packetLength,BER,tor)
+
                 if(result.type != 'NIL'):
                     ES.append(result)
                     ES = mergeSort(ES)
-            elif(i.error_flag == 1 or next_expected_ack != i.sequence_number):
+            else:
                 ES = clearTimeOutEvent(ES)
                 current_time = i.time+packetLength/C
                 TimeOutEvent = current_time+timeOut
                 ES = addTimeOutEvent(ES,TimeOutEvent,SN)
-                result = send(current_time,SN,packetLength,BER,tor)
+                result = sendNACK(current_time,SN,packetLength,BER,tor)
                 totalSend = totalSend+1
                 if(result.type != 'NIL'):
                     ES.append(result)
@@ -467,6 +478,40 @@ def send(Time,SN,packetLength,BER,tor):
         #print('ACKtime:'+str(result[0]))
         return Event('ACKEvent',result[0],result[1],result[2])
 
+def sendNACK(Time,SN,packetLength,BER,tor):
+    #print('SN#'+str(SN))
+    #print("going to forward channel")
+    #print('SN#'+str(SN))
+    global timeoutError
+    resend = 0
+    result = Channel(Time,SN,packetLength,BER,tor) # sender to recevier
+    #print("going to recevier")
+    if(result[1] == 'NIL'):
+        resend = 1
+        #print('packetloss')
+
+    #print('f time:'+ str(current_time))
+    result = ABPreceiver(result[0],result[1],result[2])
+    #print('re time:'+ str(current_time))
+    #print("going to reversal channel")
+    result = Channel(result[0],result[1],result[2],BER,tor)# receiver to sender
+    #print('r time:'+ str(result[0]))
+    #print('SN#'+str(result[1]))
+    if(timeoutError ==1):
+        timeoutError = 0
+        return Event('ACKEvent',result[0],1,result[2])
+
+    if(resend == 1):
+        return Event('NIL',result[0],1,result[2])
+
+    if(result[1] == 'NIL'):
+        #print('ack loss')
+        return Event('NIL',result[0],1,result[2])
+    else:
+        #print('SN:'+str(SN))
+        #print('ACKtime:'+str(result[0]))
+        return Event('ACKEvent',result[0],result[1],result[2])
+
 def sendGBN(Time,SN,packetLength,BER,tor):
     #print('SN#'+str(SN))
     #print("going to forward channel")
@@ -502,6 +547,9 @@ def sendGBN(Time,SN,packetLength,BER,tor):
         return Event('ACKEvent',result[0],result[1],result[2])
 
 def Channel(Time,SN,packetLength,BER,tor):
+    global Ploss
+    global Perror
+    global Pgood
     i = 0
     result = []
     global timeoutError
@@ -515,13 +563,16 @@ def Channel(Time,SN,packetLength,BER,tor):
             errorCount = errorCount+1
     #print('errorCount:'+str(errorCount))
     if(errorCount == 0):
+        Pgood = Pgood +1
         return [Time+tor,0,SN]
     elif(errorCount < 5):
         #print('error')
+        Perror = Perror +1
         timeoutError=1
         return [Time+tor,1,SN]
     else:
         #print("Oh NO")
+        Ploss = Ploss+1
         return [Time+tor,'NIL',SN]
 
 
@@ -603,6 +654,9 @@ def main():
             totalsend = ABPsenderNACK(H,1500*8,C,i,tor[0],z)
             print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
             aResult.append(totalpacket*1500*8/current_time)
+            print(Pgood)
+            print(Perror)
+            print(Ploss)
         bResult.append(aResult)
         aResult=[]
     for i in timeOutList250ms:
@@ -651,7 +705,6 @@ def main():
 
     #t1 = ABPsenderNACK(H,1500*8,C,0.0125,tor[0],0)
     #totalsend =  GBNsender(H,1500*8,C,0.0375,0.005,0)
-    #print('Throughput:' + str(1000*1500*8/current_time))
-    #print(t1)
+
 if __name__ == '__main__':
     main()
