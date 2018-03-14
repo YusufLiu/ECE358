@@ -99,7 +99,7 @@ def ABPsender(H,l,C,timeOut,tor,BER):
     if(result.type != 'NIL'):
         ES.append(result)
         ES = mergeSort(ES)
-    while(totalpacket<1000):
+    while(totalpacket<5000):
         i = ES[0]
         #print(i.type)
         if(i.type == 'TimeOutEvent'):
@@ -642,65 +642,65 @@ def main():
         for row in final:
              writer.writerow(row)
 
-    #ABPNACK
-    aResult  = []
-    bResult = []
-    cResult  = []
+    # #ABPNACK
+    # aResult  = []
+    # bResult = []
+    # cResult  = []
 
-    print("ABPNACK Simulation Results")
-    for i in timeOutList5ms:
-        for z in BER:
-            totalsend = ABPsenderNACK(H,1500*8,C,i,tor[0],z)
-            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
-            aResult.append(totalpacket*1500*8/current_time)
-            print(Pgood)
-            print(Perror)
-            print(Ploss)
-        bResult.append(aResult)
-        aResult=[]
-    for i in timeOutList250ms:
-        for z in BER:
-            totalsend = ABPsenderNACK(H,1500*8,C,i,tor[1],z)
-            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
-            aResult.append(totalpacket*1500*8/current_time)
-        cResult.append(aResult)
-        aResult=[]
-    final = []
-    for i in range(0,5):
-        final.append(bResult[i] + cResult[i])
+    # print("ABPNACK Simulation Results")
+    # for i in timeOutList5ms:
+    #     for z in BER:
+    #         totalsend = ABPsenderNACK(H,1500*8,C,i,tor[0],z)
+    #         print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
+    #         aResult.append(totalpacket*1500*8/current_time)
+    #         print(Pgood)
+    #         print(Perror)
+    #         print(Ploss)
+    #     bResult.append(aResult)
+    #     aResult=[]
+    # for i in timeOutList250ms:
+    #     for z in BER:
+    #         totalsend = ABPsenderNACK(H,1500*8,C,i,tor[1],z)
+    #         print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
+    #         aResult.append(totalpacket*1500*8/current_time)
+    #     cResult.append(aResult)
+    #     aResult=[]
+    # final = []
+    # for i in range(0,5):
+    #     final.append(bResult[i] + cResult[i])
 
-    with open("ABPNACK.csv", "wb") as f:
-        writer = csv.writer(f, delimiter = ',')
-        for row in final:
-             writer.writerow(row)
+    # with open("ABPNACK.csv", "wb") as f:
+    #     writer = csv.writer(f, delimiter = ',')
+    #     for row in final:
+    #          writer.writerow(row)
     #GBN
-    aResult  = []
-    bResult = []
-    cResult  = []
+    # aResult  = []
+    # bResult = []
+    # cResult  = []
 
-    print("GBN Simulation Results")
-    for i in timeOutList5ms:
-        for z in BER:
-            totalsend = GBNsender(H,1500*8,C,i,tor[0],z)
-            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
-            aResult.append(totalpacket*1500*8/current_time)
-        bResult.append(aResult)
-        aResult=[]
-    for i in timeOutList250ms:
-        for z in BER:
-            totalsend = GBNsender(H,1500*8,C,i,tor[1],z)
-            print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
-            aResult.append(totalpacket*1500*8/current_time)
-        cResult.append(aResult)
-        aResult=[]
-    final = []
+    # print("GBN Simulation Results")
+    # for i in timeOutList5ms:
+    #     for z in BER:
+    #         totalsend = GBNsender(H,1500*8,C,i,tor[0],z)
+    #         print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
+    #         aResult.append(totalpacket*1500*8/current_time)
+    #     bResult.append(aResult)
+    #     aResult=[]
+    # for i in timeOutList250ms:
+    #     for z in BER:
+    #         totalsend = GBNsender(H,1500*8,C,i,tor[1],z)
+    #         print('timeoutTime:'+str(i)+'  BER:'+str(z)+'  totalpacket:'+str(totalpacket) + '  totalTime:' + str(current_time)+'Throughput:' + str(totalpacket*1500*8/current_time))
+    #         aResult.append(totalpacket*1500*8/current_time)
+    #     cResult.append(aResult)
+    #     aResult=[]
+    # final = []
 
-    for i in range(0,5):
-        final.append(bResult[i] + cResult[i])
-    with open("GBN.csv", "wb") as f:
-        writer = csv.writer(f, delimiter = ',')
-        for row in final:
-             writer.writerow(row)
+    # for i in range(0,5):
+    #     final.append(bResult[i] + cResult[i])
+    # with open("GBN.csv", "wb") as f:
+    #     writer = csv.writer(f, delimiter = ',')
+    #     for row in final:
+    #          writer.writerow(row)
 
     #t1 = ABPsenderNACK(H,1500*8,C,0.0125,tor[0],0)
     #totalsend =  GBNsender(H,1500*8,C,0.0375,0.005,0)
