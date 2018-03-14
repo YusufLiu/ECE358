@@ -99,11 +99,9 @@ def ABPsender(H,l,C,timeOut,tor,BER):
     if(result.type != 'NIL'):
         ES.append(result)
         ES = mergeSort(ES)
-    #print("shoule be 2: " + str(len(ES)))
     while(totalpacket<1000):
         i = ES[0]
         #print(i.type)
-        #print("current loop number:" + str(test))
         if(i.type == 'TimeOutEvent'):
             #print(len(ES))
             #print("process time out")
@@ -216,6 +214,7 @@ def ABPsenderNACK(H,l,C,timeOut,tor,BER):
                 if(result.type != 'NIL'):
                     ES.append(result)
                     ES = mergeSort(ES)
+            #handling the NAK Case
             else:
                 ES = clearTimeOutEvent(ES)
                 current_time = i.time+packetLength/C
